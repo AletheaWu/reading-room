@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Reading Room</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      background: #2d2d2d;
+      color: #d6d2cd;
+      padding: 2.5rem 1.5rem;
+      max-width: 820px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 400;
+      letter-spacing: -0.01em;
+      margin-bottom: 0.15rem;
+    }
+    .subtitle {
+      color: #9e9a94;
+      font-size: 0.92rem;
+      font-family: system-ui, -apple-system, sans-serif;
+      margin-bottom: 1.75rem;
+    }
+
+    .card {
+      background: #3a3a3a;
+      border: 1px solid #4a4a4a;
+      border-radius: 8px;
+      padding: 1.5rem 1.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .form-row { margin-bottom: 1.2rem; }
+    .form-row:last-child { margin-bottom: 0; }
+    .form-label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #9e9a94;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    textarea, input, select {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid #4e4e4e;
+      border-radius: 5px;
+      font: inherit;
+      font-size: 0.93rem;
+      background: #4a4a4a;
+      color: #d6d2cd;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    textarea:focus, input:focus, select:focus {
+      outline: none;
+      border-color: #888;
+      box-shadow: 0 0 0 2px rgba(136, 136, 136, 0.15);
+    }
+    textarea { resize: vertical; min-height: 56px; font-family: system-ui, -apple-system, sans-serif; }
+
+    .count-select {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .count-select select {
+      width: auto;
+      padding: 0.4rem 0.6rem;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    .cat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem 0.75rem;
+    }
+    .cat-group h4 {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #9e9a94;
+      margin-bottom: 0.3rem;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .cat-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.25rem 0;
+      font-size: 0.88rem;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .cat-checkbox input[type="checkbox"] {
+      width: auto;
+      accent-color: #888;
+    }
+    .cat-checkbox label {
+      margin: 0;
+      font-weight: 400;
+      cursor: pointer;
+    }
+
+    .other-input {
+      margin-top: 0.4rem;
+      font-size: 0.85rem;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    button {
+      background: #5a5a5a;
+      color: #e8e5e0;
+      border: none;
+      border-radius: 5px;
+      padding: 0.7rem 1.5rem;
+      font: inherit;
+      font-weight: 600;
+      font-size: 0.95rem;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      transition: background 0.2s;
+      width: 100%;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    button:hover { background: #6a6a6a; }
+    button:active { background: #4a4a4a; }
+
+    .results { margin-top: 1.5rem; }
+    .results.hidden { display: none; }
+
+    .rec {
+      background: #3a3a3a;
+      border: 1px solid #4a4a4a;
+      border-radius: 8px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      gap: 1rem;
+    }
+    .rec .info { flex: 1; }
+    .rec .title {
+      font-weight: 600;
+      font-size: 1.05rem;
+      line-height: 1.35;
+    }
+    .rec .meta {
+      color: #9e9a94;
+      font-size: 0.83rem;
+      margin-top: 0.1rem;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .rec .synopsis {
+      margin-top: 0.45rem;
+      font-size: 0.88rem;
+      line-height: 1.55;
+      color: #c5c1bc;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .rec .reason {
+      margin-top: 0.4rem;
+      font-size: 0.85rem;
+      color: #9e9a94;
+      line-height: 1.5;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .rec .badge {
+      display: inline-block;
+      background: #444;
+      color: #9e9a94;
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 3px;
+      margin-top: 0.5rem;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .cover {
+      width: 56px;
+      height: 84px;
+      object-fit: cover;
+      border-radius: 3px;
+      flex-shrink: 0;
+      background: #4a4a4a;
+    }
+    .cover-placeholder {
+      width: 56px;
+      height: 84px;
+      border-radius: 3px;
+      flex-shrink: 0;
+      background: #4a4a4a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #777;
+      font-size: 0.65rem;
+      text-align: center;
+      padding: 0.2rem;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .rating {
+      display: inline-block;
+      font-size: 0.8rem;
+      color: #9e9a94;
+      margin-top: 0.25rem;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <h1>The Reading Room</h1>
+  <p class="subtitle">Tell me what you're looking for, and I'll suggest the best books for you.</p>
+
+  <div class="card">
+    <div class="form-row">
+      <label class="form-label" for="readingIntent">What are you hoping to get from your next book?</label>
+      <textarea id="readingIntent" placeholder="e.g. intellectual stimulation, escape reality, learn a new hobby, self improvement..." rows="2"></textarea>
+    </div>
+
+    <div class="form-row">
+      <label class="form-label">Genres</label>
+      <div class="cat-grid" id="catGrid"></div>
+    </div>
+
+    <div class="form-row">
+      <label class="form-label" for="looking">What are you looking for in a book?</label>
+      <textarea id="looking" placeholder="e.g. fast-paced plot, deep world-building, philosophical themes, humorous, character-driven..." rows="2"></textarea>
+    </div>
+
+    <div class="form-row">
+      <label class="form-label" for="authors">Authors you've liked in the past</label>
+      <input type="text" id="authors" placeholder="e.g. Andy Weir, Haruki Murakami, Frank Herbert">
+    </div>
+
+    <div class="form-row">
+      <label class="form-label" for="countSelect">Number of recommendations</label>
+      <div class="count-select">
+        <select id="countSelect">
+          <option value="5" selected>5</option>
+          <option value="10">10</option>
+          <option value="15">15</option>
+          <option value="20">20</option>
+        </select>
+      </div>
+    </div>
+
+    <button id="submitBtn">Get Recommendations</button>
+  </div>
+
+  <div class="results hidden" id="results">
+    <div id="recsList"></div>
+  </div>
+
+  <script>
+    const FICTION_CATS = [
+      "Science Fiction",
+      "Romance",
+      "Mystery & Thriller",
+      "Literature",
+      "Historical Fiction",
+      "Fantasy",
+    ];
+    const NONFICTION_CATS = [
+      "Biographies & Memoirs",
+      "Business",
+      "Self-Help",
+      "History",
+      "Health & Wellness",
+      "Science & Technology",
+    ];
+
+    const CATEGORY_SUBJECT = {
+      "Science Fiction": "science_fiction",
+      "Romance": "romance",
+      "Mystery & Thriller": "mystery",
+      "Literature": "literature",
+      "Historical Fiction": "historical_fiction",
+      "Fantasy": "fantasy",
+      "Biographies & Memoirs": "biography",
+      "Business": "business",
+      "Self-Help": "self_help",
+      "History": "history",
+      "Health & Wellness": "health",
+      "Science & Technology": "science",
+    };
+
+    function populateCategories() {
+      const grid = document.getElementById('catGrid');
+      const cats = [
+        { label: 'Non-Fiction', cats: NONFICTION_CATS, otherId: 'otherNonfiction' },
+        { label: 'Fiction', cats: FICTION_CATS, otherId: 'otherFiction' },
+      ];
+      grid.innerHTML = cats.map(group => `
+        <div class="cat-group">
+          <h4>${group.label}</h4>
+          ${group.cats.map(cat => `
+            <div class="cat-checkbox">
+              <input type="checkbox" id="cat-${cat.replace(/\s+/g, '-').toLowerCase()}" value="${cat}">
+              <label for="cat-${cat.replace(/\s+/g, '-').toLowerCase()}">${cat}</label>
+            </div>
+          `).join('')}
+          <input type="text" id="${group.otherId}" class="other-input" placeholder="Other genre...">
+        </div>
+      `).join('');
+    }
+    populateCategories();
+
+    function resetForm() {
+      document.getElementById('readingIntent').value = '';
+      document.getElementById('looking').value = '';
+      document.getElementById('authors').value = '';
+      document.getElementById('countSelect').value = '5';
+      document.querySelectorAll('#catGrid input[type="checkbox"]').forEach(cb => cb.checked = false);
+      document.getElementById('otherFiction').value = '';
+      document.getElementById('otherNonfiction').value = '';
+      document.getElementById('results').classList.add('hidden');
+    }
+    resetForm();
+
+    async function getRecommendations() {
+      const selectedCats = [...document.querySelectorAll('#catGrid input[type="checkbox"]:checked')].map(cb => cb.value);
+      const looking = document.getElementById('looking').value.trim();
+      const intentText = document.getElementById('readingIntent').value.trim();
+      const authorsInput = document.getElementById('authors').value.trim();
+      const resultCount = parseInt(document.getElementById('countSelect').value, 10);
+      const otherFiction = document.getElementById('otherFiction').value.trim();
+      const otherNonfiction = document.getElementById('otherNonfiction').value.trim();
+
+      const likedAuthors = authorsInput ? authorsInput.split(',').map(a => a.trim().toLowerCase()) : [];
+      const lookingWords = looking ? looking.toLowerCase().split(/\s+/).filter(w => w.length > 2) : [];
+      const intentWords = intentText ? intentText.toLowerCase().split(/\s+/).filter(w => w.length > 2) : [];
+      const otherWords = [...otherFiction.split(/\s+/), ...otherNonfiction.split(/\s+/)].filter(w => w.length > 2);
+      const allWords = [...new Set([...lookingWords, ...intentWords, ...otherWords])];
+
+      const resultsEl = document.getElementById('results');
+      const listEl = document.getElementById('recsList');
+
+      resultsEl.classList.remove('hidden');
+      listEl.innerHTML = '<div style="color:#9e9a94;padding:1rem;text-align:center;">Searching...</div>';
+
+      const qParts = [];
+      if (looking) qParts.push(looking);
+      if (intentText) qParts.push(intentText);
+      selectedCats.forEach(c => {
+        const subj = CATEGORY_SUBJECT[c];
+        if (subj) qParts.push(`subject:${subj}`);
+      });
+      if (otherFiction) qParts.push(otherFiction);
+      if (otherNonfiction) qParts.push(otherNonfiction);
+
+      let query = qParts.join(' ').trim();
+      if (!query) query = 'book';
+
+      const randomOffset = Math.floor(Math.random() * 80);
+      const params = new URLSearchParams();
+      params.set('q', query);
+      params.set('limit', Math.min(resultCount * 8, 200));
+      params.set('offset', randomOffset);
+      params.set('fields', 'title,author_name,first_publish_year,subject,key,cover_i,edition_count');
+
+      try {
+        const resp = await fetch(`https://openlibrary.org/search.json?${params}`);
+        const data = await resp.json();
+        const docs = data.docs || [];
+
+        if (docs.length === 0) {
+          listEl.innerHTML = '<div style="color:#9e9a94;padding:1rem;text-align:center;">No books match your filters. Try broadening your criteria.</div>';
+          return;
+        }
+
+        const scored = docs.map(d => {
+          let score = 0;
+          const title = d.title || '';
+          const author = (d.author_name || []).join(' ');
+          const subjects = (d.subject || []).join(' ').toLowerCase();
+          const text = `${title} ${author} ${subjects}`.toLowerCase();
+
+          allWords.forEach(w => { if (text.includes(w)) score += 2; });
+          likedAuthors.forEach(a => { if (author.includes(a)) score += 10; });
+
+          return { book: d, score };
+        });
+
+        scored.sort((a, b) => b.score - a.score);
+        const candidates = scored.slice(0, resultCount * 4);
+
+        const enrichPromises = candidates.map(async item => {
+          try {
+            const [wkResp, rateResp] = await Promise.all([
+              fetch(`https://openlibrary.org${item.book.key}.json`),
+              fetch(`https://openlibrary.org${item.book.key}/ratings.json`),
+            ]);
+            const wk = await wkResp.json();
+            const desc = wk.description;
+            item.desc = typeof desc === 'string' ? desc : (desc?.value || '');
+            try {
+              const rateData = await rateResp.json();
+              item.rating = rateData.summary?.average || null;
+              item.ratingCount = rateData.summary?.count || 0;
+            } catch { item.rating = null; item.ratingCount = 0; }
+          } catch { item.desc = ''; item.rating = null; item.ratingCount = 0; }
+        });
+        await Promise.all(enrichPromises);
+
+        const wellRated = candidates.filter(item => item.rating != null && item.rating >= 3.5);
+        const displayItems = wellRated.length >= resultCount
+          ? wellRated.slice(0, resultCount)
+          : candidates.sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, resultCount);
+
+        listEl.innerHTML = displayItems.map(item => {
+          const d = item.book;
+          const title = d.title || 'Unknown';
+          const author = (d.author_name || []).join(', ') || 'Unknown';
+          const year = d.first_publish_year || '';
+          const subs = d.subject || [];
+          const desc = item.desc || subs.slice(0, 4).join(', ') || 'No description available.';
+          const coverUrl = d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : null;
+          const hasCover = d.cover_i != null;
+          const rating = item.rating;
+          const subjStr = subs.slice(0, 3).join(', ');
+          const ageLabel = year > 2000 || !year ? 'contemporary' : 'classic';
+          let reason = `A ${ageLabel} ${subjStr ? subjStr + ' ' : ''}title${author ? ' by ' + author : ''}.`;
+          if (allWords.length) {
+            reason += ` Matches your interest in ${allWords.slice(0, 3).join(', ')}.`;
+          }
+
+          const coverHtml = hasCover
+            ? `<img src="${coverUrl}" alt="" class="cover">`
+            : `<div class="cover-placeholder">No<br>Cover</div>`;
+
+          return `
+            <div class="rec">
+              ${coverHtml}
+              <div class="info">
+                <div class="title">${title}${year ? ` <span style="font-weight:400;color:#9e9a94;">(${year})</span>` : ''}</div>
+                <div class="meta">${author}</div>
+                ${rating ? `<div class="rating">&starf; ${rating.toFixed(1)}/5${item.ratingCount ? ` (${item.ratingCount})` : ''}</div>` : ''}
+                <div class="synopsis">${desc}</div>
+                <div class="reason">Why this book: ${reason}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+      } catch (err) {
+        listEl.innerHTML = '<div style="color:#9e9a94;padding:1rem;text-align:center;">Error searching. Please try again.</div>';
+      }
+    }
+
+    document.getElementById('submitBtn').addEventListener('click', getRecommendations);
+    document.getElementById('looking').addEventListener('keydown', e => {
+      if (e.key === 'Enter' && e.shiftKey === false) {
+        e.preventDefault();
+        getRecommendations();
+      }
+    });
+  </script>
+</body>
+</html>
