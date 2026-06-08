@@ -227,16 +227,6 @@
     </div>
 
     <div class="form-row">
-      <label class="form-label" for="looking">What are you looking for in a book?</label>
-      <textarea id="looking" placeholder="e.g. fast-paced plot, deep world-building, philosophical themes, humorous, character-driven..." rows="2"></textarea>
-    </div>
-
-    <div class="form-row">
-      <label class="form-label" for="authors">Authors you've liked in the past</label>
-      <input type="text" id="authors" placeholder="e.g. Andy Weir, Haruki Murakami, Frank Herbert">
-    </div>
-
-    <div class="form-row">
       <label class="form-label" for="countSelect">Number of recommendations</label>
       <div class="count-select">
         <select id="countSelect">
@@ -311,8 +301,6 @@
 
     function resetForm() {
       document.getElementById('readingIntent').value = '';
-      document.getElementById('looking').value = '';
-      document.getElementById('authors').value = '';
       document.getElementById('countSelect').value = '5';
       document.querySelectorAll('#catGrid input[type="checkbox"]').forEach(cb => cb.checked = false);
       document.getElementById('otherFiction').value = '';
@@ -323,18 +311,12 @@
 
     async function getRecommendations() {
       const selectedCats = [...document.querySelectorAll('#catGrid input[type="checkbox"]:checked')].map(cb => cb.value);
-      const looking = document.getElementById('looking').value.trim();
       const intentText = document.getElementById('readingIntent').value.trim();
-      const authorsInput = document.getElementById('authors').value.trim();
       const resultCount = parseInt(document.getElementById('countSelect').value, 10);
       const otherFiction = document.getElementById('otherFiction').value.trim();
       const otherNonfiction = document.getElementById('otherNonfiction').value.trim();
 
-      const likedAuthors = authorsInput ? authorsInput.split(',').map(a => a.trim().toLowerCase()) : [];
-      const lookingWords = looking ? looking.toLowerCase().split(/\s+/).filter(w => w.length > 2) : [];
-      const intentWords = intentText ? intentText.toLowerCase().split(/\s+/).filter(w => w.length > 2) : [];
       const otherWords = [...otherFiction.split(/\s+/), ...otherNonfiction.split(/\s+/)].filter(w => w.length > 2);
-      const allWords = [...new Set([...lookingWords, ...intentWords, ...otherWords])];
 
       const resultsEl = document.getElementById('results');
       const listEl = document.getElementById('recsList');
@@ -343,7 +325,6 @@
       listEl.innerHTML = '<div style="color:#9e9a94;padding:1rem;text-align:center;">Searching...</div>';
 
       const qParts = [];
-      if (looking) qParts.push(looking);
       if (intentText) qParts.push(intentText);
       selectedCats.forEach(c => {
         const subj = CATEGORY_SUBJECT[c];
@@ -379,8 +360,7 @@
           const subjects = (d.subject || []).join(' ').toLowerCase();
           const text = `${title} ${author} ${subjects}`.toLowerCase();
 
-          allWords.forEach(w => { if (text.includes(w)) score += 2; });
-          likedAuthors.forEach(a => { if (author.includes(a)) score += 10; });
+          otherWords.forEach(w => { if (text.includes(w)) score += 2; });
 
           return { book: d, score };
         });
@@ -424,8 +404,8 @@
           const subjStr = subs.slice(0, 3).join(', ');
           const ageLabel = year > 2000 || !year ? 'contemporary' : 'classic';
           let reason = `A ${ageLabel} ${subjStr ? subjStr + ' ' : ''}title${author ? ' by ' + author : ''}.`;
-          if (allWords.length) {
-            reason += ` Matches your interest in ${allWords.slice(0, 3).join(', ')}.`;
+          if (otherWords.length) {
+            reason += ` Matches your interest in ${otherWords.slice(0, 3).join(', ')}.`;
           }
 
           const coverHtml = hasCover
@@ -452,7 +432,7 @@
     }
 
     document.getElementById('submitBtn').addEventListener('click', getRecommendations);
-    document.getElementById('looking').addEventListener('keydown', e => {
+    document.getElementById('readingIntent').addEventListener('keydown', e => {
       if (e.key === 'Enter' && e.shiftKey === false) {
         e.preventDefault();
         getRecommendations();
