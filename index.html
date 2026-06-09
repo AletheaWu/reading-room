@@ -179,6 +179,13 @@
       margin-top: 0.5rem;
       font-family: system-ui, -apple-system, sans-serif;
     }
+    .rating {
+      display: inline-block;
+      font-size: 0.8rem;
+      color: #9e9a94;
+      margin-top: 0.25rem;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
     .cover {
       width: 56px;
       height: 84px;
@@ -200,13 +207,6 @@
       font-size: 0.65rem;
       text-align: center;
       padding: 0.2rem;
-      font-family: system-ui, -apple-system, sans-serif;
-    }
-    .rating {
-      display: inline-block;
-      font-size: 0.8rem;
-      color: #9e9a94;
-      margin-top: 0.25rem;
       font-family: system-ui, -apple-system, sans-serif;
     }
   </style>
@@ -263,21 +263,6 @@
       "Science & Technology",
     ];
 
-    const CATEGORY_SUBJECT = {
-      "Science Fiction": "science_fiction",
-      "Romance": "romance",
-      "Mystery & Thriller": "mystery",
-      "Literature": "literature",
-      "Historical Fiction": "historical_fiction",
-      "Fantasy": "fantasy",
-      "Biographies & Memoirs": "biography",
-      "Business": "business",
-      "Self-Help": "self_help",
-      "History": "history",
-      "Health & Wellness": "health",
-      "Science & Technology": "science",
-    };
-
     function populateCategories() {
       const grid = document.getElementById('catGrid');
       const cats = [
@@ -316,99 +301,51 @@
       const otherFiction = document.getElementById('otherFiction').value.trim();
       const otherNonfiction = document.getElementById('otherNonfiction').value.trim();
 
-      const otherWords = [...otherFiction.split(/\s+/), ...otherNonfiction.split(/\s+/)].filter(w => w.length > 2);
+      const otherGenreText = [otherFiction, otherNonfiction].filter(Boolean).join(', ');
+
+      if (!intentText && selectedCats.length === 0 && !otherGenreText) {
+        alert('Please describe what you\'re looking for or select some genres.');
+        return;
+      }
+
+      let queryParts = [];
+      if (intentText) queryParts.push(intentText);
+      if (selectedCats.length) queryParts.push(selectedCats.join(' '));
+      if (otherGenreText) queryParts.push(otherGenreText);
+      const query = queryParts.join(' ').trim() || 'books';
 
       const resultsEl = document.getElementById('results');
       const listEl = document.getElementById('recsList');
 
       resultsEl.classList.remove('hidden');
-      listEl.innerHTML = '<div style="color:#9e9a94;padding:1rem;text-align:center;">Searching...</div>';
-
-      const qParts = [];
-      if (intentText) qParts.push(intentText);
-      selectedCats.forEach(c => {
-        const subj = CATEGORY_SUBJECT[c];
-        if (subj) qParts.push(`subject:${subj}`);
-      });
-      if (otherFiction) qParts.push(otherFiction);
-      if (otherNonfiction) qParts.push(otherNonfiction);
-
-      let query = qParts.join(' ').trim();
-      if (!query) query = 'book';
-
-      const randomOffset = Math.floor(Math.random() * 80);
-      const params = new URLSearchParams();
-      params.set('q', query);
-      params.set('limit', Math.min(resultCount * 8, 200));
-      params.set('offset', randomOffset);
-      params.set('fields', 'title,author_name,first_publish_year,subject,key,cover_i,edition_count');
+      listEl.innerHTML = '<div style="color:#9e9a94;padding:1rem;text-align:center;">Searching Open Library...</div>';
 
       try {
-        const resp = await fetch(`https://openlibrary.org/search.json?${params}`);
-        const data = await resp.json();
-        const docs = data.docs || [];
+        const searchResp = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=${resultCount * 2}&mode=everything`);
+        const searchData = await searchResp.json();
+        const docs = searchData.docs || [];
 
         if (docs.length === 0) {
-          listEl.innerHTML = '<div style="color:#9e9a94;padding:1rem;text-align:center;">No books match your filters. Try broadening your criteria.</div>';
+          listEl.innerHTML = '<div style="color:#9e9a94;padding:1rem;text-align:center;">No results found. Try different keywords.</div>';
           return;
         }
 
-        const scored = docs.map(d => {
-          let score = 0;
-          const title = d.title || '';
-          const author = (d.author_name || []).join(' ');
-          const subjects = (d.subject || []).join(' ').toLowerCase();
-          const text = `${title} ${author} ${subjects}`.toLowerCase();
+        const topDocs = docs.slice(0, resultCount);
 
-          otherWords.forEach(w => { if (text.includes(w)) score += 2; });
+        listEl.innerHTML = '<div style="color:#9e9a94;padding:1rem;text-align:center;">Fetching book details...</div>';
 
-          return { book: d, score };
-        });
+        const enriched = await enrichFromOpenLibrary(topDocs);
 
-        scored.sort((a, b) => b.score - a.score);
-        const candidates = scored.slice(0, resultCount * 4);
-
-        const enrichPromises = candidates.map(async item => {
-          try {
-            const [wkResp, rateResp] = await Promise.all([
-              fetch(`https://openlibrary.org${item.book.key}.json`),
-              fetch(`https://openlibrary.org${item.book.key}/ratings.json`),
-            ]);
-            const wk = await wkResp.json();
-            const desc = wk.description;
-            item.desc = typeof desc === 'string' ? desc : (desc?.value || '');
-            try {
-              const rateData = await rateResp.json();
-              item.rating = rateData.summary?.average || null;
-              item.ratingCount = rateData.summary?.count || 0;
-            } catch { item.rating = null; item.ratingCount = 0; }
-          } catch { item.desc = ''; item.rating = null; item.ratingCount = 0; }
-        });
-        await Promise.all(enrichPromises);
-
-        const wellRated = candidates.filter(item => item.rating != null && item.rating >= 3.5);
-        const displayItems = wellRated.length >= resultCount
-          ? wellRated.slice(0, resultCount)
-          : candidates.sort((a, b) => (b.rating || 0) - (a.rating || 0)).slice(0, resultCount);
-
-        listEl.innerHTML = displayItems.map(item => {
-          const d = item.book;
-          const title = d.title || 'Unknown';
-          const author = (d.author_name || []).join(', ') || 'Unknown';
-          const year = d.first_publish_year || '';
-          const subs = d.subject || [];
-          const desc = item.desc || subs.slice(0, 4).join(', ') || 'No description available.';
-          const coverUrl = d.cover_i ? `https://covers.openlibrary.org/b/id/${d.cover_i}-M.jpg` : null;
-          const hasCover = d.cover_i != null;
+        listEl.innerHTML = enriched.map(item => {
+          const title = item.title || 'Unknown';
+          const author = item.author || 'Unknown';
+          const year = item.year || '';
+          const desc = item.synopsis || 'No description available.';
+          const genres = item.genres;
           const rating = item.rating;
-          const subjStr = subs.slice(0, 3).join(', ');
-          const ageLabel = year > 2000 || !year ? 'contemporary' : 'classic';
-          let reason = `A ${ageLabel} ${subjStr ? subjStr + ' ' : ''}title${author ? ' by ' + author : ''}.`;
-          if (otherWords.length) {
-            reason += ` Matches your interest in ${otherWords.slice(0, 3).join(', ')}.`;
-          }
+          const coverUrl = item.coverId ? `https://covers.openlibrary.org/b/id/${item.coverId}-M.jpg` : null;
 
-          const coverHtml = hasCover
+          const coverHtml = coverUrl
             ? `<img src="${coverUrl}" alt="" class="cover">`
             : `<div class="cover-placeholder">No<br>Cover</div>`;
 
@@ -416,19 +353,74 @@
             <div class="rec">
               ${coverHtml}
               <div class="info">
-                <div class="title">${title}${year ? ` <span style="font-weight:400;color:#9e9a94;">(${year})</span>` : ''}</div>
-                <div class="meta">${author}</div>
-                ${rating ? `<div class="rating">&starf; ${rating.toFixed(1)}/5${item.ratingCount ? ` (${item.ratingCount})` : ''}</div>` : ''}
-                <div class="synopsis">${desc}</div>
-                <div class="reason">Why this book: ${reason}</div>
+                <div class="title">${escHtml(title)}${year ? ` <span style="font-weight:400;color:#9e9a94;">(${year})</span>` : ''}</div>
+                <div class="meta">${escHtml(author)}${genres ? ` &middot; ${escHtml(genres)}` : ''}</div>
+                ${rating ? `<div class="rating">&starf; ${rating}/5</div>` : ''}
+                <div class="synopsis">${escHtml(desc)}</div>
               </div>
             </div>
           `;
         }).join('');
 
       } catch (err) {
-        listEl.innerHTML = '<div style="color:#9e9a94;padding:1rem;text-align:center;">Error searching. Please try again.</div>';
+        listEl.innerHTML = `<div style="color:#9e9a94;padding:1rem;text-align:center;">Error: ${escHtml(err.message)}</div>`;
       }
+    }
+
+    async function enrichFromOpenLibrary(docs) {
+      const results = [];
+      for (const doc of docs) {
+        try {
+          const year = doc.first_publish_year || '';
+          const subjects = doc.subject || [];
+          const genres = subjects.slice(0, 3).join(', ');
+          const coverId = doc.cover_i || null;
+          const author = (doc.author_name || []).join(', ');
+
+          let desc = '';
+          let rating = null;
+          try {
+            const [wkResp, rateResp] = await Promise.all([
+              fetch(`https://openlibrary.org${doc.key}.json`),
+              fetch(`https://openlibrary.org${doc.key}/ratings.json`),
+            ]);
+            const wk = await wkResp.json();
+            const d = wk.description;
+            desc = typeof d === 'string' ? d : (d?.value || '');
+            try {
+              const rateData = await rateResp.json();
+              rating = rateData.summary?.average ? rateData.summary.average.toFixed(1) : null;
+            } catch { rating = null; }
+          } catch { }
+
+          results.push({
+            title: doc.title || '',
+            author,
+            year,
+            synopsis: desc || subjects.slice(0, 4).join(', ') || '',
+            genres,
+            rating,
+            coverId,
+          });
+        } catch {
+          results.push({
+            title: doc.title || '',
+            author: (doc.author_name || []).join(', ') || '',
+            year: '',
+            synopsis: '',
+            genres: '',
+            rating: null,
+            coverId: null,
+          });
+        }
+      }
+      return results;
+    }
+
+    function escHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
     }
 
     document.getElementById('submitBtn').addEventListener('click', getRecommendations);
