@@ -165,18 +165,6 @@
       margin-top: 0.5rem;
       font-family: system-ui, -apple-system, sans-serif;
     }
-    .trending-badge {
-      display: inline-block;
-      background: #7a5c3a;
-      color: #f0e6d0;
-      font-size: 0.72rem;
-      padding: 0.2rem 0.5rem;
-      border-radius: 3px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      font-family: system-ui, -apple-system, sans-serif;
-    }
     .rating {
       display: inline-block;
       font-size: 0.8rem;
@@ -321,11 +309,6 @@
           .sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating))
           .slice(0, resultCount);
 
-        const trendingBook = await fetchRandomTrending(selectedGenres, keywords);
-        if (trendingBook) {
-          sorted.push(trendingBook);
-        }
-
         if (sorted.length === 0) {
           listEl.innerHTML = '<div style="color:#9e9a94;padding:1rem;text-align:center;">No books found with enough ratings. Try different keywords or broaden your search.</div>';
           return;
@@ -344,10 +327,6 @@
             ? `<img src="${coverUrl}" alt="" class="cover">`
             : `<div class="cover-placeholder">No<br>Cover</div>`;
 
-          const trendingHtml = item.isTrending
-            ? '<div class="trending-badge" style="margin-top:0.5rem;">Trending Pick</div>'
-            : '';
-
           return `
             <div class="rec">
               ${coverHtml}
@@ -356,7 +335,6 @@
                 <div class="meta">${escHtml(author)}${genres ? ` &middot; ${escHtml(genres)}` : ''}</div>
                 ${rating ? `<div class="rating">&starf; ${rating}/5</div>` : ''}
                 <div class="synopsis">${escHtml(desc)}</div>
-                ${trendingHtml}
               </div>
             </div>
           `;
@@ -404,7 +382,6 @@
             rating,
             ratingsCount,
             coverId,
-            isTrending: false,
           });
         } catch {
           results.push({
@@ -416,57 +393,10 @@
             rating: null,
             ratingsCount: 0,
             coverId: null,
-            isTrending: false,
           });
         }
       }
       return results;
-    }
-
-    async function fetchRandomTrending(selectedGenres, keywords) {
-      try {
-        const resp = await fetch('https://openlibrary.org/trending/now.json');
-        const data = await resp.json();
-        const works = data.works || [];
-
-        const kw = keywords ? keywords.toLowerCase() : '';
-        const genreLower = selectedGenres.map(g => g.toLowerCase());
-
-        const filtered = works.filter(w => {
-          const subjects = (w.subjects || []).map(s => s.toLowerCase());
-          for (const g of genreLower) {
-            if (subjects.some(s => s.includes(g))) return false;
-          }
-          if (kw && w.title && w.title.toLowerCase().includes(kw)) return false;
-          if (kw) {
-            for (const s of subjects) {
-              if (s.includes(kw)) return false;
-            }
-          }
-          return true;
-        });
-
-        if (filtered.length === 0) return null;
-
-        const pick = filtered[Math.floor(Math.random() * filtered.length)];
-
-        const workDocs = [{
-          key: pick.key,
-          title: pick.title || '',
-          author_name: pick.author_name || [],
-          first_publish_year: pick.first_publish_year || '',
-          subject: pick.subjects || [],
-          cover_i: pick.cover_id || null,
-        }];
-
-        const enriched = await enrichFromOpenLibrary(workDocs);
-        if (enriched.length > 0) {
-          return { ...enriched[0], isTrending: true };
-        }
-        return null;
-      } catch {
-        return null;
-      }
     }
 
     function escHtml(s) {
