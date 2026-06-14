@@ -76,41 +76,27 @@
       font-family: system-ui, -apple-system, sans-serif;
     }
 
-    .cat-grid {
+    .genre-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 0.5rem 0.75rem;
+      gap: 0.4rem 0.75rem;
     }
-    .cat-group h4 {
-      font-size: 0.72rem;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: #9e9a94;
-      margin-bottom: 0.3rem;
-      font-family: system-ui, -apple-system, sans-serif;
-    }
-    .cat-checkbox {
+    .genre-item {
       display: flex;
       align-items: center;
       gap: 0.4rem;
-      padding: 0.25rem 0;
+      padding: 0.3rem 0;
       font-size: 0.88rem;
       font-family: system-ui, -apple-system, sans-serif;
     }
-    .cat-checkbox input[type="checkbox"] {
+    .genre-item input[type="checkbox"] {
       width: auto;
       accent-color: #888;
     }
-    .cat-checkbox label {
+    .genre-item label {
       margin: 0;
       font-weight: 400;
       cursor: pointer;
-    }
-
-    .other-input {
-      margin-top: 0.4rem;
-      font-size: 0.85rem;
-      font-family: system-ui, -apple-system, sans-serif;
     }
 
     button {
@@ -179,6 +165,18 @@
       margin-top: 0.5rem;
       font-family: system-ui, -apple-system, sans-serif;
     }
+    .trending-badge {
+      display: inline-block;
+      background: #7a5c3a;
+      color: #f0e6d0;
+      font-size: 0.72rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 3px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
     .rating {
       display: inline-block;
       font-size: 0.8rem;
@@ -213,21 +211,21 @@
 </head>
 <body>
   <h1>The Reading Room</h1>
-  <p class="subtitle">Tell me what you're looking for, and I'll suggest the best books for you.</p>
+  <p class="subtitle">Pick a genre, enter some keywords, and discover your next great read.</p>
 
   <div class="card">
     <div class="form-row">
-      <label class="form-label" for="readingIntent">What are you hoping to get from your next book?</label>
-      <textarea id="readingIntent" placeholder="e.g. intellectual stimulation, escape reality, learn a new hobby, self improvement..." rows="2"></textarea>
+      <label class="form-label">1. Choose a Genre</label>
+      <div class="genre-grid" id="genreGrid"></div>
     </div>
 
     <div class="form-row">
-      <label class="form-label">Genres</label>
-      <div class="cat-grid" id="catGrid"></div>
+      <label class="form-label" for="keywordsInput">2. Keywords (optional)</label>
+      <input type="text" id="keywordsInput" placeholder="e.g. time travel, ancient rome, cooking..." />
     </div>
 
     <div class="form-row">
-      <label class="form-label" for="countSelect">Number of recommendations</label>
+      <label class="form-label" for="countSelect">3. Number of recommendations</label>
       <div class="count-select">
         <select id="countSelect">
           <option value="5" selected>5</option>
@@ -246,73 +244,50 @@
   </div>
 
   <script>
-    const FICTION_CATS = [
-      "Science Fiction",
-      "Romance",
-      "Mystery & Thriller",
-      "Literature",
-      "Historical Fiction",
-      "Fantasy",
-    ];
-    const NONFICTION_CATS = [
-      "Biographies & Memoirs",
-      "Business",
-      "Self-Help",
+    const GENRES = [
+      "Arts",
+      "Fiction",
+      "Science & Mathematics",
+      "Business & Finance",
       "History",
       "Health & Wellness",
-      "Science & Technology",
+      "Biography",
+      "Social Sciences",
+      "Places",
+      "Textbooks",
     ];
 
-    function populateCategories() {
-      const grid = document.getElementById('catGrid');
-      const cats = [
-        { label: 'Non-Fiction', cats: NONFICTION_CATS, otherId: 'otherNonfiction' },
-        { label: 'Fiction', cats: FICTION_CATS, otherId: 'otherFiction' },
-      ];
-      grid.innerHTML = cats.map(group => `
-        <div class="cat-group">
-          <h4>${group.label}</h4>
-          ${group.cats.map(cat => `
-            <div class="cat-checkbox">
-              <input type="checkbox" id="cat-${cat.replace(/\s+/g, '-').toLowerCase()}" value="${cat}">
-              <label for="cat-${cat.replace(/\s+/g, '-').toLowerCase()}">${cat}</label>
-            </div>
-          `).join('')}
-          <input type="text" id="${group.otherId}" class="other-input" placeholder="Other genre...">
-        </div>
-      `).join('');
+    function populateGenres() {
+      const grid = document.getElementById('genreGrid');
+      grid.innerHTML = GENRES.map(g => {
+        const id = 'genre-' + g.replace(/[^a-z0-9]/gi, '-').toLowerCase();
+        return `
+          <div class="genre-item">
+            <input type="checkbox" id="${id}" value="${g}">
+            <label for="${id}">${g}</label>
+          </div>
+        `;
+      }).join('');
     }
-    populateCategories();
+    populateGenres();
 
     function resetForm() {
-      document.getElementById('readingIntent').value = '';
+      document.getElementById('keywordsInput').value = '';
       document.getElementById('countSelect').value = '5';
-      document.querySelectorAll('#catGrid input[type="checkbox"]').forEach(cb => cb.checked = false);
-      document.getElementById('otherFiction').value = '';
-      document.getElementById('otherNonfiction').value = '';
+      document.querySelectorAll('#genreGrid input[type="checkbox"]').forEach(cb => cb.checked = false);
       document.getElementById('results').classList.add('hidden');
     }
     resetForm();
 
     async function getRecommendations() {
-      const selectedCats = [...document.querySelectorAll('#catGrid input[type="checkbox"]:checked')].map(cb => cb.value);
-      const intentText = document.getElementById('readingIntent').value.trim();
+      const selectedGenres = [...document.querySelectorAll('#genreGrid input[type="checkbox"]:checked')].map(cb => cb.value);
+      const keywords = document.getElementById('keywordsInput').value.trim();
       const resultCount = parseInt(document.getElementById('countSelect').value, 10);
-      const otherFiction = document.getElementById('otherFiction').value.trim();
-      const otherNonfiction = document.getElementById('otherNonfiction').value.trim();
 
-      const otherGenreText = [otherFiction, otherNonfiction].filter(Boolean).join(', ');
-
-      if (!intentText && selectedCats.length === 0 && !otherGenreText) {
-        alert('Please describe what you\'re looking for or select some genres.');
+      if (selectedGenres.length === 0 && !keywords) {
+        alert('Please select a genre or enter some keywords.');
         return;
       }
-
-      let queryParts = [];
-      if (intentText) queryParts.push(intentText);
-      if (selectedCats.length) queryParts.push(selectedCats.join(' '));
-      if (otherGenreText) queryParts.push(otherGenreText);
-      const query = queryParts.join(' ').trim() || 'books';
 
       const resultsEl = document.getElementById('results');
       const listEl = document.getElementById('recsList');
@@ -321,22 +296,42 @@
       listEl.innerHTML = '<div style="color:#9e9a94;padding:1rem;text-align:center;">Searching Open Library...</div>';
 
       try {
-        const searchResp = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=${resultCount * 2}&mode=everything`);
+        const query = keywords || 'books';
+        const searchLimit = Math.max(resultCount * 5, 30);
+        let searchUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=${searchLimit}&mode=everything`;
+        if (selectedGenres.length > 0) {
+          searchUrl += `&subject=${encodeURIComponent(selectedGenres.join(','))}`;
+        }
+
+        const searchResp = await fetch(searchUrl);
         const searchData = await searchResp.json();
         const docs = searchData.docs || [];
 
         if (docs.length === 0) {
-          listEl.innerHTML = '<div style="color:#9e9a94;padding:1rem;text-align:center;">No results found. Try different keywords.</div>';
+          listEl.innerHTML = '<div style="color:#9e9a94;padding:1rem;text-align:center;">No results found. Try different keywords or genres.</div>';
           return;
         }
 
-        const topDocs = docs.slice(0, resultCount);
-
         listEl.innerHTML = '<div style="color:#9e9a94;padding:1rem;text-align:center;">Fetching book details...</div>';
 
-        const enriched = await enrichFromOpenLibrary(topDocs);
+        const enriched = await enrichFromOpenLibrary(docs);
 
-        listEl.innerHTML = enriched.map(item => {
+        const sorted = enriched
+          .filter(item => item.ratingsCount >= 5)
+          .sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating))
+          .slice(0, resultCount);
+
+        const trendingBook = await fetchRandomTrending(selectedGenres, keywords);
+        if (trendingBook) {
+          sorted.push(trendingBook);
+        }
+
+        if (sorted.length === 0) {
+          listEl.innerHTML = '<div style="color:#9e9a94;padding:1rem;text-align:center;">No books found with enough ratings. Try different keywords or broaden your search.</div>';
+          return;
+        }
+
+        listEl.innerHTML = sorted.map(item => {
           const title = item.title || 'Unknown';
           const author = item.author || 'Unknown';
           const year = item.year || '';
@@ -349,6 +344,10 @@
             ? `<img src="${coverUrl}" alt="" class="cover">`
             : `<div class="cover-placeholder">No<br>Cover</div>`;
 
+          const trendingHtml = item.isTrending
+            ? '<div class="trending-badge" style="margin-top:0.5rem;">Trending Pick</div>'
+            : '';
+
           return `
             <div class="rec">
               ${coverHtml}
@@ -357,6 +356,7 @@
                 <div class="meta">${escHtml(author)}${genres ? ` &middot; ${escHtml(genres)}` : ''}</div>
                 ${rating ? `<div class="rating">&starf; ${rating}/5</div>` : ''}
                 <div class="synopsis">${escHtml(desc)}</div>
+                ${trendingHtml}
               </div>
             </div>
           `;
@@ -379,6 +379,7 @@
 
           let desc = '';
           let rating = null;
+          let ratingsCount = 0;
           try {
             const [wkResp, rateResp] = await Promise.all([
               fetch(`https://openlibrary.org${doc.key}.json`),
@@ -390,6 +391,7 @@
             try {
               const rateData = await rateResp.json();
               rating = rateData.summary?.average ? rateData.summary.average.toFixed(1) : null;
+              ratingsCount = rateData.summary?.count || 0;
             } catch { rating = null; }
           } catch { }
 
@@ -400,7 +402,9 @@
             synopsis: desc || subjects.slice(0, 4).join(', ') || '',
             genres,
             rating,
+            ratingsCount,
             coverId,
+            isTrending: false,
           });
         } catch {
           results.push({
@@ -410,11 +414,59 @@
             synopsis: '',
             genres: '',
             rating: null,
+            ratingsCount: 0,
             coverId: null,
+            isTrending: false,
           });
         }
       }
       return results;
+    }
+
+    async function fetchRandomTrending(selectedGenres, keywords) {
+      try {
+        const resp = await fetch('https://openlibrary.org/trending/now.json');
+        const data = await resp.json();
+        const works = data.works || [];
+
+        const kw = keywords ? keywords.toLowerCase() : '';
+        const genreLower = selectedGenres.map(g => g.toLowerCase());
+
+        const filtered = works.filter(w => {
+          const subjects = (w.subjects || []).map(s => s.toLowerCase());
+          for (const g of genreLower) {
+            if (subjects.some(s => s.includes(g))) return false;
+          }
+          if (kw && w.title && w.title.toLowerCase().includes(kw)) return false;
+          if (kw) {
+            for (const s of subjects) {
+              if (s.includes(kw)) return false;
+            }
+          }
+          return true;
+        });
+
+        if (filtered.length === 0) return null;
+
+        const pick = filtered[Math.floor(Math.random() * filtered.length)];
+
+        const workDocs = [{
+          key: pick.key,
+          title: pick.title || '',
+          author_name: pick.author_name || [],
+          first_publish_year: pick.first_publish_year || '',
+          subject: pick.subjects || [],
+          cover_i: pick.cover_id || null,
+        }];
+
+        const enriched = await enrichFromOpenLibrary(workDocs);
+        if (enriched.length > 0) {
+          return { ...enriched[0], isTrending: true };
+        }
+        return null;
+      } catch {
+        return null;
+      }
     }
 
     function escHtml(s) {
@@ -424,7 +476,7 @@
     }
 
     document.getElementById('submitBtn').addEventListener('click', getRecommendations);
-    document.getElementById('readingIntent').addEventListener('keydown', e => {
+    document.getElementById('keywordsInput').addEventListener('keydown', e => {
       if (e.key === 'Enter' && e.shiftKey === false) {
         e.preventDefault();
         getRecommendations();
